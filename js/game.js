@@ -114,10 +114,11 @@ const GAME = {
     this.titleFrame = (this.titleFrame || 0) + dt;
     const cl = ENGINE.consumeClick();
     if (!cl) return;
+    const hit = (x, y, w, h) => cl.x >= x && cl.x <= x+w && cl.y >= y && cl.y <= y+h;
     const W = ENGINE.W, H = ENGINE.H;
-    if (ENGINE.clicked(W/2 - 100, 340, 200, 36)) this._startNewGame();
-    else if (ENGINE.clicked(W/2 - 100, 388, 200, 36)) this._goMode('LOAD');
-    else if (ENGINE.clicked(W/2 - 100, 436, 200, 36)) this._goMode('SAVE');
+    if (hit(W/2 - 100, 340, 200, 36)) this._startNewGame();
+    else if (hit(W/2 - 100, 388, 200, 36)) this._goMode('LOAD');
+    else if (hit(W/2 - 100, 436, 200, 36)) this._goMode('SAVE');
   },
 
   _renderTitle() {
@@ -165,18 +166,14 @@ const GAME = {
   },
 
   _updateCharSelect() {
+    if (this.charSelectNaming) { this._handleNameTyping(); }
     const cl = ENGINE.consumeClick();
-    if (this.charSelectNaming) {
-      this._handleNameTyping();
-      return;
-    }
     if (!cl) return;
+    const hit = (x, y, w, h) => cl.x >= x && cl.x <= x+w && cl.y >= y && cl.y <= y+h;
     const W = ENGINE.W;
-    // Class arrows
-    if (ENGINE.clicked(120, 280, 40, 40)) this.charSelectClass = (this.charSelectClass + 3) % 4;
-    if (ENGINE.clicked(800, 280, 40, 40)) this.charSelectClass = (this.charSelectClass + 1) % 4;
-    // Begin naming
-    if (ENGINE.clicked(W/2 - 100, 540, 200, 40)) this.charSelectNaming = true;
+    if (hit(120, 280, 40, 40)) this.charSelectClass = (this.charSelectClass + 3) % 4;
+    if (hit(800, 280, 40, 40)) this.charSelectClass = (this.charSelectClass + 1) % 4;
+    if (hit(W/2 - 100, 540, 200, 40)) this.charSelectNaming = true;
   },
 
   _handleNameTyping() {
@@ -279,18 +276,19 @@ const GAME = {
   _updateScene() {
     const cl = ENGINE.consumeClick();
     if (!cl) return;
+    const hit = (x, y, w, h) => cl.x >= x && cl.x <= x+w && cl.y >= y && cl.y <= y+h;
     const scene = SCENES[this.currentScene];
-    if (!scene) return;
 
     // HUD buttons
-    if (ENGINE.clicked(ENGINE.W - 130, ENGINE.H - 50, 120, 36)) { this._goMode('MAP'); return; }
-    if (ENGINE.clicked(10, ENGINE.H - 50, 60, 36)) { this._openInventory(); return; }
-    if (ENGINE.clicked(80, ENGINE.H - 50, 60, 36)) { this._goMode('SAVE'); return; }
+    if (hit(ENGINE.W - 130, ENGINE.H - 50, 120, 36)) { this._goMode('MAP'); return; }
+    if (hit(10, ENGINE.H - 50, 60, 36)) { this._openInventory(); return; }
+    if (hit(80, ENGINE.H - 50, 60, 36)) { this._goMode('SAVE'); return; }
 
+    if (!scene) return;
     // Hotspots
     for (const hs of (scene.hotspots || [])) {
       if (!this._checkCondition(hs)) continue;
-      if (cl.x >= hs.x && cl.x <= hs.x + hs.w && cl.y >= hs.y && cl.y <= hs.y + hs.h) {
+      if (hit(hs.x, hs.y, hs.w, hs.h)) {
         this._fireAction(hs);
         return;
       }
@@ -423,28 +421,25 @@ const GAME = {
     const node = this.currentDialogue;
     if (!node) { this._endDialogue(); return; }
     const cl = ENGINE.consumeClick();
+    if (!cl) return;
+    const hit = (x, y, w, h) => cl.x >= x && cl.x <= x+w && cl.y >= y && cl.y <= y+h;
     const lines = this._dialogueLines(node);
 
     // Choice node — show choices after all lines are shown
     if (node.choices && this.dialogueLine >= lines.length) {
-      if (!cl) return;
       const baseY = ENGINE.H - 160;
       node.choices.forEach((ch, i) => {
-        if (ENGINE.clicked(120, baseY + i * 36, 720, 32)) {
-          this._pickChoice(ch);
-        }
+        if (hit(120, baseY + i * 36, 720, 32)) this._pickChoice(ch);
       });
       return;
     }
 
     // Advance lines
-    if (cl) {
-      this.dialogueLine++;
-      if (this.dialogueLine >= lines.length && !node.choices) {
-        this._applyDialogueEffects(node);
-        if (node.next) this._startDialogue(node.next);
-        else this._endDialogue();
-      }
+    this.dialogueLine++;
+    if (this.dialogueLine >= lines.length && !node.choices) {
+      this._applyDialogueEffects(node);
+      if (node.next) this._startDialogue(node.next);
+      else this._endDialogue();
     }
   },
 
@@ -534,8 +529,9 @@ const GAME = {
   _updateMap() {
     const cl = ENGINE.consumeClick();
     if (!cl) return;
+    const hit = (x, y, w, h) => cl.x >= x && cl.x <= x+w && cl.y >= y && cl.y <= y+h;
     // Back button
-    if (ENGINE.clicked(10, 10, 80, 30)) { this._goMode('SCENE'); return; }
+    if (hit(10, 10, 80, 30)) { this._goMode('SCENE'); return; }
 
     for (const loc of Object.values(MAP_LOCATIONS)) {
       if (this.mapUnlocked.indexOf(loc.scene) < 0) continue;
@@ -852,9 +848,10 @@ const GAME = {
   _updateSave() {
     const cl = ENGINE.consumeClick();
     if (!cl) return;
-    if (ENGINE.clicked(10, 10, 80, 30)) { this._goMode('SCENE'); return; }
+    const hit = (x, y, w, h) => cl.x >= x && cl.x <= x+w && cl.y >= y && cl.y <= y+h;
+    if (hit(10, 10, 80, 30)) { this._goMode('SCENE'); return; }
     for (let i = 0; i < 3; i++) {
-      if (ENGINE.clicked(ENGINE.W/2 - 200, 180 + i * 110, 400, 90)) {
+      if (hit(ENGINE.W/2 - 200, 180 + i * 110, 400, 90)) {
         this._saveGame(i);
         this._goMode('SCENE');
         return;
@@ -865,9 +862,10 @@ const GAME = {
   _updateLoad() {
     const cl = ENGINE.consumeClick();
     if (!cl) return;
-    if (ENGINE.clicked(10, 10, 80, 30)) { this._goMode(this.party.length ? 'SCENE' : 'TITLE'); return; }
+    const hit = (x, y, w, h) => cl.x >= x && cl.x <= x+w && cl.y >= y && cl.y <= y+h;
+    if (hit(10, 10, 80, 30)) { this._goMode(this.party.length ? 'SCENE' : 'TITLE'); return; }
     for (let i = 0; i < 3; i++) {
-      if (ENGINE.clicked(ENGINE.W/2 - 200, 180 + i * 110, 400, 90) && this.saveSlots[i]) {
+      if (hit(ENGINE.W/2 - 200, 180 + i * 110, 400, 90) && this.saveSlots[i]) {
         this._loadGame(i);
         return;
       }
